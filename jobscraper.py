@@ -80,7 +80,6 @@ class JobScraper:
         msg['From'] = self.config['smtp']['user']
         msg['To'] = self.config['recipient']['email']
 
-        # Create a secure SSL context
         context = ssl.create_default_context()
 
         with smtplib.SMTP_SSL(self.config['smtp']['url'], self.config['smtp']['port'], context=context) as server:

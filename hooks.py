@@ -1,7 +1,7 @@
 import time
+from datetime import datetime, timedelta
 import requests
 from dateutil import parser as dp
-from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 from selenium import webdriver
 
