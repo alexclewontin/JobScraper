@@ -6,7 +6,8 @@ from datetime import datetime as dt
 import yaml
 import mysql.connector as mdb
 import pystache as ps
-import scraper
+
+import hooks
 
 class JobScraper:
     def __init__(self):
@@ -96,8 +97,8 @@ class JobScraper:
 
     def crawl(self):
 
-        for s in self.src:
-            for c in self.src[s]:
+        for b in self.src:
+            for c in self.src[b]:
                 if 'cmd' in c:
                     cmd = c['cmd']
                 else:
@@ -106,13 +107,17 @@ class JobScraper:
                     fmt = c['fmt']
                 else:
                     fmt = ''
-                raw = scraper.scrape(s, c['company'], c['url'], fmt=fmt, cmd=cmd)
-                for r in raw:
-                    self.opps.append(r)
-                for o in self.opps:
-                    self.__touch_opp(o['date'], o['company'], o['title'], o['loc'], o['id'])
+                self.scrape(fmt, b, c['company'], c['url'], cmd=cmd)
+        for o in self.opps:
+            self.__touch_opp(o['date'], o['company'], o['title'], o['loc'], o['id'])
 
-        print('crawled')
+    def scrape(self, fmt, board, company, url, cmd=''):
+        data = getattr(hooks, 'get_' + fmt.lower())(url, cmd)
+        result = getattr(hooks, 'parse_' + board.lower())(data, company)
+        self.opps.append(result)
+
+
+
 
 js = JobScraper()
 js.crawl()
