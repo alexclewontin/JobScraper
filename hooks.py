@@ -1,9 +1,12 @@
+"""This module supplies JobScraper with the format and source specific hooks for acquiring data."""
+
 import time
 from datetime import datetime, timedelta
 import requests
 from dateutil import parser as dp
 from bs4 import BeautifulSoup
 from selenium import webdriver
+
 
 def get_raw(url, cmd):
     options = webdriver.ChromeOptions()

@@ -1,3 +1,5 @@
+"""TODO: add a docstring"""
+
 import smtplib
 import ssl
 from email.mime.text import MIMEText
@@ -10,14 +12,15 @@ import pystache as ps
 import hooks
 
 class JobScraper:
+    """Encapsulates all the methods and data needed by JobScraper"""
     def __init__(self):
         self.opps = []
         with open('sources.yaml', 'r') as f:
             self.src = yaml.full_load(f)
         with open('config.yaml', 'r') as f:
-            self.config = yaml.full_load(f)
+            self.cfg = yaml.full_load(f)
 
-        self.cnx = mdb.connect(user=self.config['db']['user'], password=self.config['db']['passwd'], database=self.config['db']['db'])
+        self.cnx = mdb.connect(user=self.cfg['db']['user'], password=self.cfg['db']['passwd'], database=self.cfg['db']['db'])
         self.cur = self.cnx.cursor(dictionary=True)
         self.cur.execute('SHOW TABLES')
         tables_raw = self.cur.fetchall()
@@ -25,13 +28,18 @@ class JobScraper:
         for s in tables_raw:
             for i in s.values():
                 tables.append(i)
-        spec = '(odate DATE, sdate DATE, corp VARCHAR(255), title VARCHAR(255), loc VARCHAR(255), id VARCHAR(255))'
+        self.spec = '''(odate DATE,
+                        sdate DATE,
+                        corp VARCHAR(255),
+                        title VARCHAR(255),
+                        loc VARCHAR(255),
+                        id VARCHAR(255))'''
         if 'new' not in tables:
-            self.cur.execute('CREATE TABLE new' + spec)
+            self.cur.execute('CREATE TABLE new' + self.spec)
         if 'current' not in tables:
-            self.cur.execute('CREATE TABLE current' + spec)
+            self.cur.execute('CREATE TABLE current' + self.spec)
         if 'old' not in tables:
-            self.cur.execute('CREATE TABLE old' + spec)
+            self.cur.execute('CREATE TABLE old' + self.spec)
 
         self.cnx.commit()
 
@@ -45,7 +53,9 @@ class JobScraper:
             data = (date.strftime('%Y-%m-%d'), dt.today().strftime('%Y-%m-%d'), corp, title, loc, ident)
             self.cur.execute(stmnt, data)
         else:
-            self.cur.execute('UPDATE current SET sdate = %s WHERE corp = %s AND id = %s ', (dt.today().strftime('%Y-%m-%d'), corp, ident))
+            stmnt = 'UPDATE current SET sdate = %s WHERE corp = %s AND id = %s; '
+            data = (dt.today().strftime('%Y-%m-%d'), corp, ident)
+            self.cur.execute(stmnt, data)
         self.cnx.commit()
 
     def send_email(self):
@@ -56,7 +66,6 @@ class JobScraper:
         old_opps = self.cur.fetchall()
 
         if not new_opps and not old_opps:
-            print('nothing new')
             return
 
         msg = MIMEMultipart('alternative')
@@ -77,14 +86,14 @@ class JobScraper:
         msg.attach(part1)
         msg.attach(part2)
 
-        msg['From'] = self.config['smtp']['user']
-        msg['To'] = self.config['recipient']['email']
+        msg['From'] = self.cfg['smtp']['user']
+        msg['To'] = self.cfg['recipient']['email']
 
         context = ssl.create_default_context()
 
-        with smtplib.SMTP_SSL(self.config['smtp']['url'], self.config['smtp']['port'], context=context) as server:
-            server.login(self.config['smtp']['user'], self.config['smtp']['passwd'])
-            server.sendmail(self.config['smtp']['user'], self.config['recipient']['email'], msg.as_string())
+        with smtplib.SMTP_SSL(self.cfg['smtp']['url'], self.cfg['smtp']['port'], context=context) as server:
+            server.login(self.cfg['smtp']['user'], self.cfg['smtp']['passwd'])
+            server.sendmail(self.cfg['smtp']['user'], self.cfg['recipient']['email'], msg.as_string())
 
         self.cur.execute('INSERT INTO old SELECT * FROM current WHERE sdate != %s', (dt.today().strftime('%Y-%m-%d'),))
         self.cur.execute('DELETE FROM current WHERE sdate != %s', (dt.today().strftime('%Y-%m-%d'),))
@@ -106,11 +115,11 @@ class JobScraper:
                     fmt = c['fmt']
                 else:
                     fmt = ''
-                self.scrape(fmt, b, c['company'], c['url'], cmd=cmd)
+                self.__scrape(fmt, b, c['company'], c['url'], cmd=cmd)
         for o in self.opps:
             self.__touch_opp(o['date'], o['company'], o['title'], o['loc'], o['id'])
 
-    def scrape(self, fmt, board, company, url, cmd=''):
+    def __scrape(self, fmt, board, company, url, cmd=''):
         data = getattr(hooks, 'get_' + fmt.lower())(url, cmd)
         result = getattr(hooks, 'parse_' + board.lower())(data, company)
         self.opps.append(result)
@@ -118,6 +127,6 @@ class JobScraper:
 
 
 
-js = JobScraper()
-js.crawl()
-js.send_email()
+JS = JobScraper()
+JS.crawl()
+JS.send_email()
