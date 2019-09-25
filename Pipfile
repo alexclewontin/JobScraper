@@ -1,0 +1,19 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pylint = "*"
+
+[packages]
+requests = "*"
+beautifulsoup4 = "*"
+selenium = "*"
+pyyaml = "*"
+mysql-connector-python = "*"
+python-dateutil = "*"
+pystache = "*"
+
+[requires]
+python_version = "3.7"

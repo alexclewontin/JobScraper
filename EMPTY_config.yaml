@@ -1,0 +1,14 @@
+db:
+  user:
+  passwd:
+  db: "jobscraper"
+
+smtp:
+  user:
+  passwd:
+  url:
+  port: 465
+
+recipient:
+  email:
+

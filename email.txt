@@ -1,0 +1,15 @@
+NEWLY POSTED OPPORTUNITIES:
+{{#new}}
+    - {{corp}} posted {{title}} in {{loc}} on {{odate}} 
+{{/new}}
+{{^new}}
+    No new opportunities :(
+{{/new}}
+
+OPPORTUNITIES TAKEN DOWN:
+{{#old}}
+    - {{corp}} took down {{title}} in {{loc}}, posted {{odate}}
+{{/old}}
+{{^old}}
+    No opportunities have been removed!
+{{/old}}
