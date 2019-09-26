@@ -5,7 +5,6 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime as dt
-import yaml
 import mysql.connector as mdb
 import pystache as ps
 
@@ -13,13 +12,10 @@ import hooks
 
 class JobScraper:
     """Encapsulates all the methods and data needed by JobScraper"""
-    def __init__(self):
+    def __init__(self, cfg, src):
         self.opps = []
-        with open('../config/sources.yaml', 'r') as f:
-            self.src = yaml.full_load(f)
-        with open('../config/config.yaml', 'r') as f:
-            self.cfg = yaml.full_load(f)
-
+        self.cfg = cfg
+        self.src = src
         self.cnx = mdb.connect(user=self.cfg['db']['user'], password=self.cfg['db']['passwd'], database=self.cfg['db']['db'])
         self.cur = self.cnx.cursor(dictionary=True)
         self.cur.execute('SHOW TABLES')
@@ -126,6 +122,4 @@ class JobScraper:
         self.opps.extend(result)
 
 
-JS = JobScraper()
-JS.crawl()
-JS.send_email()
+

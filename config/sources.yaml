@@ -1,0 +1,27 @@
+
+-
+  company: "NPR"
+  board: "ultipro"
+  url: "https://recruiting.ultipro.com/NAT1011NATPR/JobBoard/af823b19-a43b-4cda-b6c2-c06508d84cf6/?q=&o=postedDateDesc"
+  fmt: "raw"
+-
+  company: "Politico"
+  board: "ultipro"
+  url: "https://recruiting.ultipro.com/PER1013PCLL/JobBoard/b972ff6a-41b7-4e97-9c71-273c2595c77d/?q=&o=postedDateDesc"
+  fmt: "raw"
+-
+  company: "FLM/The Intercept"
+  board: "greenhouse"
+  url: "https://boards-api.greenhouse.io/v1/boards/firstlookmedia/jobs"
+  fmt: "JSON"
+-
+  company: "Vice"
+  board: "greenhouse"
+  url: "https://boards-api.greenhouse.io/v1/boards/vice/jobs"
+  fmt: "JSON"
+-
+  company: "Vox"
+  board: "greenhouse"
+  url: "https://boards-api.greenhouse.io/v1/boards/voxmedia/jobs"
+  fmt: "JSON"
+
