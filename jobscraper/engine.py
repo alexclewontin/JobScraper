@@ -15,9 +15,9 @@ class JobScraper:
     """Encapsulates all the methods and data needed by JobScraper"""
     def __init__(self):
         self.opps = []
-        with open('sources.yaml', 'r') as f:
+        with open('../config/sources.yaml', 'r') as f:
             self.src = yaml.full_load(f)
-        with open('config.yaml', 'r') as f:
+        with open('../config/config.yaml', 'r') as f:
             self.cfg = yaml.full_load(f)
 
         self.cnx = mdb.connect(user=self.cfg['db']['user'], password=self.cfg['db']['passwd'], database=self.cfg['db']['db'])
@@ -25,9 +25,8 @@ class JobScraper:
         self.cur.execute('SHOW TABLES')
         tables_raw = self.cur.fetchall()
         tables = []
-        for s in tables_raw:
-            for i in s.values():
-                tables.append(i)
+        for t in tables_raw:
+            tables.extend(t.values())
         self.spec = '''(odate DATE,
                         sdate DATE,
                         corp VARCHAR(255),
@@ -43,19 +42,21 @@ class JobScraper:
 
         self.cnx.commit()
 
-    def __touch_opp(self, date, corp, title, loc, ident):
-        self.cur.execute('SELECT id FROM current WHERE id = %s AND corp = %s', (ident, corp))
+    def __touch_opp(self, data):
+        stmnt = 'SELECT id FROM current WHERE id = %s AND corp = %s'
+        args = (data['id'], data['corp'])
+        self.cur.execute(stmnt, args)
         result = self.cur.fetchall()
-        #self.cur.execute('SELECT id FROM new WHERE id = %s AND corp = %s', (ident, corp))
+        #self.cur.execute('SELECT id FROM new WHERE id = %s AND corp = %s', (id, corp))
         #result.append(self.cur.fetchall())
         if not result:
             stmnt = 'INSERT INTO new VALUES (%s, %s, %s, %s, %s, %s);'
-            data = (date.strftime('%Y-%m-%d'), dt.today().strftime('%Y-%m-%d'), corp, title, loc, ident)
-            self.cur.execute(stmnt, data)
+            args = (data['date'].strftime('%Y-%m-%d'), dt.today().strftime('%Y-%m-%d'), data['corp'], data['title'], data['loc'], data['id'])
+            self.cur.execute(stmnt, args)
         else:
             stmnt = 'UPDATE current SET sdate = %s WHERE corp = %s AND id = %s; '
-            data = (dt.today().strftime('%Y-%m-%d'), corp, ident)
-            self.cur.execute(stmnt, data)
+            args = (dt.today().strftime('%Y-%m-%d'), data['corp'], data['id'])
+            self.cur.execute(stmnt, args)
         self.cnx.commit()
 
     def send_email(self):
@@ -69,7 +70,7 @@ class JobScraper:
             return
 
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = ''
+        msg['Subject'] = 'Job updates!'
 
         with open('email.txt', 'r') as f:
             text = f.read()
@@ -117,14 +118,12 @@ class JobScraper:
                     fmt = ''
                 self.__scrape(fmt, b, c['company'], c['url'], cmd=cmd)
         for o in self.opps:
-            self.__touch_opp(o['date'], o['company'], o['title'], o['loc'], o['id'])
+            self.__touch_opp(o)
 
     def __scrape(self, fmt, board, company, url, cmd=''):
         data = getattr(hooks, 'get_' + fmt.lower())(url, cmd)
         result = getattr(hooks, 'parse_' + board.lower())(data, company)
-        self.opps.append(result)
-
-
+        self.opps.extend(result)
 
 
 JS = JobScraper()

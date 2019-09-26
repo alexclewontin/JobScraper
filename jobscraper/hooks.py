@@ -42,7 +42,7 @@ def parse_ultipro(data, company):
         else:
             date = datetime.strptime(date, '%b %d, %Y')
         o = {
-            'company' : company,
+            'corp' : company,
             'title' : r.find(attrs={"data-automation":"job-title"}).string,
             'loc' : r.find(attrs={"data-automation":"city-state-zip-country-label"}).string,
             'id' : r.find(attrs={"data-bind":"text: RequisitionNumber()"}).string,
@@ -69,7 +69,7 @@ def parse_workday(data, company):
         else:
             date = datetime.strftime(datetime.now() - timedelta(int(raw[2])), '%Y-%m-%d')
         o = {
-            'company' : company,
+            'corp' : company,
             'title' : r.find(class_='WA0O').string,
             'loc' : raw[0],
             'id' : raw[1],
@@ -84,7 +84,7 @@ def parse_greenhouse(data, company):
     for j in data['jobs']:
         date = dp.parse(j['updated_at'])
         o = {
-            'company' : company,
+            'corp' : company,
             'title' : j['title'],
             'loc': j['location']['name'],
             'id' : j['id'],
