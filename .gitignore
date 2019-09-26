@@ -3,3 +3,4 @@ Pipfile.lock
 sources.yaml
 MANIFEST
 dist
+.DS_Store
