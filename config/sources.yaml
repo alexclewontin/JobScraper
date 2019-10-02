@@ -3,25 +3,53 @@
   company: "NPR"
   board: "ultipro"
   url: "https://recruiting.ultipro.com/NAT1011NATPR/JobBoard/af823b19-a43b-4cda-b6c2-c06508d84cf6/?q=&o=postedDateDesc"
-  fmt: "raw"
+  fmt: "rendered"
+-
+  company: "NPR"
+  board: "ultipro"
+  url: "https://recruiting.ultipro.com/NAT1011NATPR/JobBoard/fc254a05-d68e-44c0-a2ba-267380d146ba/?q=&o=postedDateDesc"
+  fmt: "rendered"
 -
   company: "Politico"
   board: "ultipro"
   url: "https://recruiting.ultipro.com/PER1013PCLL/JobBoard/b972ff6a-41b7-4e97-9c71-273c2595c77d/?q=&o=postedDateDesc"
-  fmt: "raw"
+  fmt: "rendered"
 -
   company: "FLM/The Intercept"
   board: "greenhouse"
   url: "https://boards-api.greenhouse.io/v1/boards/firstlookmedia/jobs"
-  fmt: "JSON"
+  fmt: "raw"
 -
   company: "Vice"
   board: "greenhouse"
   url: "https://boards-api.greenhouse.io/v1/boards/vice/jobs"
-  fmt: "JSON"
+  fmt: "raw"
 -
   company: "Vox"
   board: "greenhouse"
   url: "https://boards-api.greenhouse.io/v1/boards/voxmedia/jobs"
-  fmt: "JSON"
+  fmt: "raw"
+-
+  company: "The Daily Beast"
+  board: "greenhouse"
+  url: "https://boards-api.greenhouse.io/v1/boards/thedailybeast31/jobs"
+  fmt: "raw"
+-
+  company: "Quartz Media"
+  board: "applytojob"
+  url: "https://quartzmediainc.applytojob.com/apply/"
+  fmt: "raw"
+-
+  company: "Atlantic Media"
+  board: "applytojob"
+  url: "https://atlanticmedia.applytojob.com/"
+  fmt: "raw"
+-
+  company: "Boston Globe"
+  board: "applytojob"
+  url: "https://bostonglobemediapartners.applytojob.com/"
+  fmt: "raw"
+
+
+
 

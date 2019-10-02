@@ -14,14 +14,14 @@
     <table cellpadding="0" cellspacing="0" width="100%">
         <tr><td><h2>Newly Posted Opportunities</h2></td></tr>
         {{#new}}
-            <tr><td>- <b>{{corp}}</b> posted <em>{{title}}</em> in {{loc}} on {{odate}}</td></tr>
+            <tr><td>- <b>{{corp}}</b> posted <a href={{url}}>{{title}}</a> in {{loc}} on {{odate}}</td></tr>
         {{/new}}
         {{^new}}
             No new opportunities :(
         {{/new}}
         <tr><td><h2>Opportunities Taken Down</h2></td></tr>
         {{#old}}
-            <tr><td>- <b>{{corp}}</b> removed <em>{{title}}</em> in {{loc}}, posted {{odate}}</td></tr>
+            <tr><td>- <b>{{corp}}</b> removed <a href={{url}}>{{title}}</a> in <em>{{loc}}</em>, posted {{odate}}</td></tr>
         {{/old}}
         {{^old}}
             No opportunities have been removed!
