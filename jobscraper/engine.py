@@ -17,6 +17,7 @@ import hooks
 class JobScraper:
     """Encapsulates all the methods and data needed by JobScraper"""
     def __init__(self, cfg, src):
+        print('Initializing...')
         self.opps = []
         self.cfg = cfg
         self.src = src
@@ -28,7 +29,7 @@ class JobScraper:
         for t in tables_raw:
             tables.extend(t.values())
         self.spec = '''(odate DATE,
-                        sdate DATE,
+                        seen BIT,
                         corp VARCHAR(255),
                         title VARCHAR(255),
                         loc VARCHAR(255),
@@ -42,8 +43,16 @@ class JobScraper:
             self.cur.execute('CREATE TABLE old' + self.spec)
 
         self.cnx.commit()
+        print("Initialized")
 
     def __touch_opp(self, data):
+        self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
+        seen = self.cur.fetchone()
+        if seen['seen'] == 1:
+            next_seen = 0
+        else:
+            next_seen = 1
+
         stmnt = 'SELECT id FROM current WHERE id = %s AND corp = %s'
         args = (data['id'], data['corp'])
         self.cur.execute(stmnt, args)
@@ -51,12 +60,12 @@ class JobScraper:
         #self.cur.execute('SELECT id FROM new WHERE id = %s AND corp = %s', (id, corp))
         #result.append(self.cur.fetchall())
         if not result:
-            stmnt = 'INSERT INTO new VALUES (%s, %s, %s, %s, %s, %s, %s);'
-            args = (data['date'].strftime('%Y-%m-%d'), dt.today().strftime('%Y-%m-%d'), data['corp'], data['title'], data['loc'], data['id'], data['url'])
+            stmnt = 'INSERT INTO new VALUES (%s, %s, %s, %s, %s, %s, %s)'
+            args = (data['date'].strftime('%Y-%m-%d'), next_seen, data['corp'], data['title'], data['loc'], data['id'], data['url'])
             self.cur.execute(stmnt, args)
         else:
-            stmnt = 'UPDATE current SET sdate = %s WHERE corp = %s AND id = %s; '
-            args = (dt.today().strftime('%Y-%m-%d'), data['corp'], data['id'])
+            stmnt = 'UPDATE current SET seen = %s WHERE corp = %s AND id = %s'
+            args = (next_seen, data['corp'], data['id'])
             self.cur.execute(stmnt, args)
         self.cnx.commit()
 
@@ -64,10 +73,19 @@ class JobScraper:
         self.cur.execute('SELECT * FROM new')
         new_opps = self.cur.fetchall()
 
-        self.cur.execute('SELECT * FROM current WHERE sdate != %s', (dt.today().strftime('%Y-%m-%d'),))
+        self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
+        seen = self.cur.fetchone()
+        if seen['seen'] == 1:
+            next_seen = 0
+        else:
+            next_seen = 1
+
+        self.cur.execute('SELECT * FROM current WHERE seen != %s AND id != \'TRACKER\'', (next_seen,))
         old_opps = self.cur.fetchall()
 
         if not new_opps and not old_opps:
+            self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (next_seen,))
+            self.cnx.commit()
             print('Nothing new, no email sent.')
             return
 
@@ -92,18 +110,22 @@ class JobScraper:
             server.login(self.cfg['smtp']['user'], self.cfg['smtp']['passwd'])
             server.sendmail(self.cfg['smtp']['user'], self.cfg['recipient']['email'], msg.as_string())
 
-        self.cur.execute('INSERT INTO old SELECT * FROM current WHERE sdate != %s', (dt.today().strftime('%Y-%m-%d'),))
-        self.cur.execute('DELETE FROM current WHERE sdate != %s', (dt.today().strftime('%Y-%m-%d'),))
+        self.cur.execute('INSERT INTO old SELECT * FROM current WHERE seen != %s AND id != \'TRACKER\'', (next_seen,))
+        self.cur.execute('DELETE FROM current WHERE seen != %s AND id != \'TRACKER\'', (next_seen,))
         self.cnx.commit()
 
         self.cur.execute('INSERT INTO current SELECT * FROM new')
         self.cur.execute('DELETE FROM new')
         self.cnx.commit()
 
+        self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (next_seen,))
+        self.cnx.commit()
+
         print('Database updated, email sent')
 
     def crawl(self):
         for c in self.src:
+            print('Crawling %s...' % c['company'])
             if 'cmd' in c:
                 cmd = c['cmd']
             else:
