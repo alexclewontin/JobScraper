@@ -5,12 +5,14 @@ import ssl
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime as dt
+import pathlib
 
 import mysql.connector as mdb
 import pystache as ps
 from selenium import webdriver
 import requests
+
+import yaml
 
 import hooks
 
@@ -43,7 +45,18 @@ class JobScraper:
             self.cur.execute('CREATE TABLE old' + self.spec)
 
         self.cnx.commit()
+
+        options = webdriver.ChromeOptions()
+            #options.binary_location = 'chromedriver'
+        options.add_argument('--window-size=1200x800')
+        options.add_argument('--headless')
+
+        self.browser = webdriver.Chrome(options=options)
         print("Initialized")
+
+    def __del__(self):
+        self.browser.quit()
+        self.cnx.close()
 
     def __touch_opp(self, data):
         self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
@@ -136,21 +149,12 @@ class JobScraper:
 
     def __scrape(self, fmt, board, company, url, cmd=''):
         if fmt == 'rendered':
-            options = webdriver.ChromeOptions()
-            #options.binary_location = 'chromedriver'
-            options.add_argument('--window-size=1200x800')
-            options.add_argument('--headless')
-
-            browser = webdriver.Chrome(options=options)
-
-            browser.implicitly_wait(30)
-            browser.get(url)
+            self.browser.implicitly_wait(30)
+            self.browser.get(url)
             time.sleep(5)
-            browser.execute_script(cmd)
+            self.browser.execute_script(cmd)
             time.sleep(5)
-            data = browser.execute_script("return document.body.innerHTML")
-
-            browser.quit()
+            data = self.browser.execute_script("return document.body.innerHTML")
 
         elif fmt == 'raw':
             data = requests.get(url)
@@ -160,3 +164,21 @@ class JobScraper:
         result = getattr(hooks, 'parse_' + board.lower())(data, company)
 
         self.opps.extend(result)
+
+path = pathlib.Path(__file__).absolute().parent.parent / 'config'
+
+with open(path.as_posix() + '/sources.yaml', 'r') as f:
+    sources = yaml.full_load(f)
+with open(path.as_posix() + '/config.yaml', 'r') as f:
+    config = yaml.full_load(f)
+with open(path.as_posix() + '/email.txt', 'r') as f:
+    tmpl_text = f.read()
+with open(path.as_posix() + '/email.html', 'r') as f:
+    tmpl_html = f.read()
+
+JS = JobScraper(config, sources)
+JS.crawl()
+JS.send_email(tmpl_text, tmpl_html)
+
+#hacky, to avoid "ImportError: sys.meta_path is None, Python is likely shutting down" exception from destructor
+del JS

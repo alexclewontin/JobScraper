@@ -3,3 +3,5 @@ Pipfile.lock
 MANIFEST
 dist
 .DS_Store
+google_api_key
+install.sh

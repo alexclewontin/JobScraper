@@ -33,11 +33,33 @@ def parse_skeleton(data, company):
     return opps
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 import hashlib
+import pathlib
 
+import requests
 from dateutil import parser as dp
 from bs4 import BeautifulSoup
+
+def fuzzy_loc_match(loc):
+    if loc == 'Remote':
+        return 'Remote'
+
+    path = pathlib.Path(__file__).absolute().parent.parent / 'config'
+    with open(path.as_posix() + '/google_api_key', 'r') as f:
+        key = f.read()
+
+    endpoint = 'https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s'
+    loc = loc.replace('.', '')
+    loc = loc.replace(' ', '+')
+    endpoint = endpoint % (loc, key)
+
+    response = requests.get(endpoint)
+    response = response.json()
+    #for r in response['results']:
+
+
+#fuzzy_loc_match('New York, Washington, D.C., Remote')
 
 def parse_ultipro(data, company):
     opps = []

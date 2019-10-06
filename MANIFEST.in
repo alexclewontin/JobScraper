@@ -1,3 +1,0 @@
-include config/EMPTY_config.yaml
-include config/email.html
-include config/email.txt
