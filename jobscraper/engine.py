@@ -135,6 +135,7 @@ class JobScraper:
         self.cnx.commit()
 
         self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT cur.corp FROM current cur WHERE cur.corp NOT IN (SELECT name FROM outlets)')
+        self.cnx.commit()
 
         print('Database updated, email sent')
 
