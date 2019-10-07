@@ -83,7 +83,7 @@ class JobScraper:
         self.cnx.commit()
 
     def send_email(self, text, html):
-        self.cur.execute('SELECT * FROM new')
+        self.cur.execute('SELECT * FROM new WHERE corp IN (SELECT * FROM outlets)')
         new_opps = self.cur.fetchall()
 
         self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
@@ -133,6 +133,8 @@ class JobScraper:
 
         self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (next_seen,))
         self.cnx.commit()
+
+        self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT cur.corp FROM current cur WHERE cur.corp NOT IN (SELECT name FROM outlets)')
 
         print('Database updated, email sent')
 
