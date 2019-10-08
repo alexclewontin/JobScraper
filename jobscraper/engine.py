@@ -1,20 +1,20 @@
 """TODO: add a docstring"""
 
+import pathlib
 import smtplib
 import ssl
 import time
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import pathlib
+from email.mime.text import MIMEText
 
 import mysql.connector as mdb
 import pystache as ps
-from selenium import webdriver, common
 import requests
-
 import yaml
+from selenium import common, webdriver
 
 import hooks
+
 
 class JobScraper:
     """Encapsulates all the methods and data needed by JobScraper"""
@@ -173,5 +173,3 @@ JS = JobScraper(config, sources)
 JS.crawl()
 JS.send_email(tmpl_text, tmpl_html)
 
-#hacky, to avoid "ImportError: sys.meta_path is None, Python is likely shutting down" exception from destructor on normal exit
-#del JS
