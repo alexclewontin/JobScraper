@@ -43,7 +43,6 @@ class JobScraper:
             self.cur.execute('CREATE TABLE current' + self.spec)
         if 'old' not in tables:
             self.cur.execute('CREATE TABLE old' + self.spec)
-
         self.cnx.commit()
 
         self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
@@ -187,4 +186,4 @@ JS.crawl()
 JS.send_email(tmpl_text, tmpl_html)
 
 #hacky, to avoid "ImportError: sys.meta_path is None, Python is likely shutting down" exception from destructor on normal exit
-del JS
+#del JS
