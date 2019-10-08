@@ -12,6 +12,8 @@ a chromedriver executable, and an installation of MySQL, or MariaDB.
 
 Coming soon.
 
+Most elements should be system-independent (at least across POSIX systems), but because deamon systems vary between, for examnple, macOS and Ubuntu, running the engine as a daemon has been left as an exercise to the reader.
+
 ## Configuration
 
 An empty `config.yaml` file is included in the repository. The fields should be fairly self-explanatory. The email templates are included as `email.html` and `email.txt`. They should be trivial to customize.
