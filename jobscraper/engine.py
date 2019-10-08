@@ -38,11 +38,12 @@ class JobScraper:
                         id VARCHAR(255),
                         url VARCHAR(255),
                         status VARCHAR(255))'''
-        if 'current' not in tables:
-            self.cur.execute('CREATE TABLE current' + self.spec)
-        self.cnx.commit()
+        if 'jobs' not in tables:
+            self.cur.execute('CREATE TABLE jobs' + self.spec)
+            self.cur.execute('INSERT INTO jobs VALUES (NULL, 0, NULL, NULL, NULL, \'TRACKER\', NULL, NULL)')
+            self.cnx.commit()
 
-        self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
+        self.cur.execute('SELECT seen FROM jobs WHERE id = \'TRACKER\'')
         seen = self.cur.fetchone()
         if seen['seen'] == 1:
             self.next_seen = 0
@@ -65,33 +66,33 @@ class JobScraper:
         self.cnx.close()
 
     def __touch_opp(self, data):
-        stmnt = 'SELECT id FROM current WHERE id = %s AND corp = %s'
+        stmnt = 'SELECT id FROM jobs WHERE id = %s AND corp = %s'
         args = (data['id'], data['corp'])
         self.cur.execute(stmnt, args)
         result = self.cur.fetchall()
         #self.cur.execute('SELECT id FROM new WHERE id = %s AND corp = %s', (id, corp))
         #result.append(self.cur.fetchall())
         if not result:
-            stmnt = 'INSERT INTO current VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+            stmnt = 'INSERT INTO jobs VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
             args = (data['date'].strftime('%Y-%m-%d'), self.next_seen, data['corp'], data['title'], data['loc'], data['id'], data['url'], 'new')
             self.cur.execute(stmnt, args)
         else:
-            stmnt = 'UPDATE current SET seen = %s WHERE corp = %s AND id = %s'
+            stmnt = 'UPDATE jobs SET seen = %s WHERE corp = %s AND id = %s'
             args = (self.next_seen, data['corp'], data['id'])
             self.cur.execute(stmnt, args)
         self.cnx.commit()
 
     def send_email(self, text, html):
-        self.cur.execute('SELECT * FROM current WHERE status = \'new\' AND corp IN (SELECT * FROM outlets)')
+        self.cur.execute('SELECT * FROM jobs WHERE status = \'new\' AND corp IN (SELECT * FROM outlets)')
         new_opps = self.cur.fetchall()
 
-        self.cur.execute('SELECT * FROM current WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
+        self.cur.execute('SELECT * FROM jobs WHERE status = \'current\' AND seen != %s AND id != \'TRACKER\'', (self.next_seen,))
         old_opps = self.cur.fetchall()
 
         if not new_opps and not old_opps:
-            self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (self.next_seen,))
-            self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT corp FROM current WHERE corp NOT IN (SELECT name FROM outlets)')
-            self.cur.execute('UPDATE current SET status = \'current\' WHERE status = \'new\'')
+            self.cur.execute('UPDATE jobs SET seen = %s WHERE id = \'TRACKER\' and status = \'current\'', (self.next_seen,))
+            self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT corp FROM jobs WHERE corp NOT IN (SELECT name FROM outlets)')
+            self.cur.execute('UPDATE jobs SET status = \'current\' WHERE status = \'new\'')
             self.cnx.commit()
             print('Nothing new, no email sent.')
             return
@@ -117,16 +118,16 @@ class JobScraper:
             server.login(self.cfg['smtp']['user'], self.cfg['smtp']['passwd'])
             server.sendmail(self.cfg['smtp']['user'], self.cfg['recipient']['email'], msg.as_string())
 
-        self.cur.execute('UPDATE current SET status = \'old\' WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
+        self.cur.execute('UPDATE jobs SET status = \'old\' WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
         self.cnx.commit()
 
-        self.cur.execute('UPDATE current SET status = \'current\' WHERE status = \'new\'')
+        self.cur.execute('UPDATE jobs SET status = \'current\' WHERE status = \'new\'')
         self.cnx.commit()
 
-        self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (self.next_seen,))
+        self.cur.execute('UPDATE jobs SET seen = %s WHERE id = \'TRACKER\'', (self.next_seen,))
         self.cnx.commit()
 
-        self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT cur.corp FROM current cur WHERE cur.corp NOT IN (SELECT name FROM outlets)')
+        self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT j.corp FROM jobs j WHERE j.corp NOT IN (SELECT name FROM outlets)')
         self.cnx.commit()
 
         print('Database updated, email sent')
@@ -161,7 +162,7 @@ class JobScraper:
 
             self.opps.extend(result)
         except common.exceptions.TimeoutException:
-            self.cur.execute('UPDATE current SET seen = %s WHERE corp = %s', (self.next_seen, company))
+            self.cur.execute('UPDATE jobs SET seen = %s WHERE corp = %s AND status = \'current\'', (self.next_seen, company))
             print("Request timed out.")
 
 path = pathlib.Path(__file__).absolute().parent.parent / 'config'
