@@ -15,6 +15,7 @@ a dict containing the following keys:
 The following is a skeleton that can be used to build parser hooks:
 
 def parse_skeleton(data, company):
+    '''TODO: add docstring'''
     opps = []
     # some code here
     for r in raw_opps:
@@ -42,6 +43,7 @@ from dateutil import parser as dp
 from bs4 import BeautifulSoup
 
 def fuzzy_loc_match(loc):
+    '''TODO: add docstring'''
     if loc == 'Remote':
         return 'Remote'
 
@@ -62,6 +64,7 @@ def fuzzy_loc_match(loc):
 #fuzzy_loc_match('New York, Washington, D.C., Remote')
 
 def parse_ultipro(data, company):
+    '''TODO: add docstring'''
     opps = []
     soup = BeautifulSoup(data, 'html.parser')
     raw_opps = soup.find_all(class_='opportunity')
@@ -83,6 +86,7 @@ def parse_ultipro(data, company):
     return opps
 
 def parse_greenhouse(data, company):
+    '''TODO: add docstring'''
     opps = []
     data = data.json()
     for j in data['jobs']:
@@ -100,6 +104,7 @@ def parse_greenhouse(data, company):
     return opps
 
 def parse_applytojob(data, company):
+    '''TODO: add docstring'''
     opps = []
     soup = BeautifulSoup(data.text, 'html.parser')
     raw_opps = soup.find_all(class_='list-group-item')
@@ -121,6 +126,7 @@ def parse_applytojob(data, company):
     return opps
 
 def parse_workday(data, company):
+    '''TODO: add docstring'''
     opps = []
     soup = BeautifulSoup(data, 'html.parser')
     raw_opps = soup.find_all(attrs={'data-automation-id' : 'compositeContainer'})
@@ -148,8 +154,9 @@ def parse_workday(data, company):
         }
         opps.append(o)
     return opps
-    
+
 def parse_slate(data, company):
+    '''TODO: add docstring'''
     opps = []
 
     soup = BeautifulSoup(data.text, 'html.parser')

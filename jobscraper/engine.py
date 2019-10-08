@@ -26,11 +26,8 @@ class JobScraper:
         self.cnx = mdb.connect(user=self.cfg['db']['user'], password=self.cfg['db']['passwd'], database=self.cfg['db']['db'])
         self.cur = self.cnx.cursor(dictionary=True)
         self.cur.execute('SHOW TABLES')
-        tables_raw = self.cur.fetchall()
-        tables = []
-        for t in tables_raw:
-            tables.extend(t.values())
-        self.spec = '''(odate DATE,
+        tables = [i for l in self.cur.fetchall() for i in l.values()]
+        spec = '''(odate DATE,
                         seen BIT,
                         corp VARCHAR(255),
                         title VARCHAR(255),
@@ -39,7 +36,7 @@ class JobScraper:
                         url VARCHAR(255),
                         status VARCHAR(255))'''
         if 'jobs' not in tables:
-            self.cur.execute('CREATE TABLE jobs' + self.spec)
+            self.cur.execute('CREATE TABLE jobs' + spec)
             self.cur.execute('INSERT INTO jobs VALUES (NULL, 0, NULL, NULL, NULL, \'TRACKER\', NULL, NULL)')
             self.cnx.commit()
 
@@ -83,6 +80,7 @@ class JobScraper:
         self.cnx.commit()
 
     def send_email(self, text, html):
+        """TODO: add docstring"""
         self.cur.execute('SELECT * FROM jobs WHERE status = \'new\' AND corp IN (SELECT * FROM outlets)')
         new_opps = self.cur.fetchall()
 
@@ -119,20 +117,15 @@ class JobScraper:
             server.sendmail(self.cfg['smtp']['user'], self.cfg['recipient']['email'], msg.as_string())
 
         self.cur.execute('UPDATE jobs SET status = \'old\' WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
-        self.cnx.commit()
-
         self.cur.execute('UPDATE jobs SET status = \'current\' WHERE status = \'new\'')
-        self.cnx.commit()
-
         self.cur.execute('UPDATE jobs SET seen = %s WHERE id = \'TRACKER\'', (self.next_seen,))
-        self.cnx.commit()
-
         self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT j.corp FROM jobs j WHERE j.corp NOT IN (SELECT name FROM outlets)')
         self.cnx.commit()
 
         print('Database updated, email sent')
 
     def crawl(self):
+        """TODO: add docstring"""
         for c in self.src:
             print('Crawling %s...' % c['company'])
             if 'cmd' in c:
