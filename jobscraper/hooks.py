@@ -33,7 +33,7 @@ def parse_skeleton(data, company):
     return opps
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 import pathlib
 
@@ -116,6 +116,61 @@ def parse_applytojob(data, company):
             'id' : m.hexdigest(),
             'date' : datetime.today(),
             'url' : r.find(class_='list-group-item-heading').a['href']
+        }
+        opps.append(o)
+    return opps
+
+def parse_workday(data, company):
+    opps = []
+    soup = BeautifulSoup(data, 'html.parser')
+    raw_opps = soup.find_all(attrs={'data-automation-id' : 'compositeContainer'})
+    for r in raw_opps:
+        title = r.find(attrs={'role' : 'link'}).string
+        raw = r.find(attrs={'data-automation-id' : 'compositeSubHeaderOne'}).string.split('|')
+        raw = [i.strip() for i in raw]
+        raw[2] = raw[2].split(' ', 1)[1].split(' ')[0]
+        #raw[2] = raw[2].split(' ')[0]
+        if raw[2] == 'Today':
+            date = datetime.today().strftime('%Y-%m-%d')
+        elif raw[2] == 'Yesterday':
+            date = datetime.strftime(datetime.now() - timedelta(1), '%Y-%m-%d')
+        elif raw[2] == '30+':
+            date = None
+        else:
+            date = datetime.strftime(datetime.now() - timedelta(int(raw[2])), '%Y-%m-%d')
+        o = {
+            'corp' : company,
+            'title' : title,
+            'loc' : raw[0],
+            'id' : raw[1],
+            'date' : date,
+            'url' : "about:blank"
+        }
+        opps.append(o)
+    return opps
+    
+def parse_slate(data, company):
+    opps = []
+
+    soup = BeautifulSoup(data.text, 'html.parser')
+    soup = soup.find(class_='standalone-page__content')
+    raw_opps = soup.find_all('a')
+    for r in raw_opps:
+        url = r['href']
+        m = hashlib.md5()
+        m.update(url.encode('utf-8'))
+        r = r.string.split('-')
+        if len(r) > 1:
+            loc = r[1]
+        else:
+            loc = "None"
+        o = {
+            'corp' : company,
+            'title' : r[0].strip(),
+            'loc' : loc,
+            'id' : m.hexdigest(),
+            'date' : datetime.today(),
+            'url' : url
         }
         opps.append(o)
     return opps

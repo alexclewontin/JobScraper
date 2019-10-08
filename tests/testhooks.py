@@ -34,39 +34,28 @@ from datetime import datetime, timedelta
 from dateutil import parser as dp
 from bs4 import BeautifulSoup
 
-def parse_workday(data, company):
+def parse_slate(data, company):
     opps = []
-    soup = BeautifulSoup(data, 'html.parser')
-    raw_opps = soup.find_all(attrs={'data-automation-id' : 'compositeContainer'})
+
+    soup = BeautifulSoup(data.text, 'html.parser')
+    soup = soup.find(class_='standalone-page__content')
+    raw_opps = soup.find_all('a')
     for r in raw_opps:
-        print(r)
-        title = r.find(attrs={'role' : 'link'}).string #.split('|')
-        print(title)
-        raw = r.find(attrs={'data-automation-id' : 'compositeSubHeaderOne'}).string
-        print(raw)
-        raw = [i.strip() for i in raw]
-        raw[2] = raw[2].split(' ', 1)[1]
-        raw[2] = raw[2].split(' ')[0]
-        if raw[2] == 'Today':
-            date = datetime.today().strftime('%Y-%m-%d')
-        elif raw[2] == 'Yesterday':
-            date = datetime.strftime(datetime.now() - timedelta(1), '%Y-%m-%d')
-        elif raw[2] == '30+':
-            date = None
+        url = r['href']
+        m = hashlib.md5()
+        m.update(url.encode('utf-8'))
+        r = r.string.split('-')
+        if len(r) > 1:
+            loc = r[1]
         else:
-            date = datetime.strftime(datetime.now() - timedelta(int(raw[2])), '%Y-%m-%d')
+            loc = "None"
         o = {
             'corp' : company,
-            'title' : title,
-            'loc' : raw[0],
-            'id' : raw[1],
-            'date' : date,
-            'url' : 
+            'title' : r[0].strip(),
+            'loc' : loc,
+            'id' : m.hexdigest(),
+            'date' : datetime.today(),
+            'url' : url
         }
         opps.append(o)
     return opps
-
-"""
-
-
-"""

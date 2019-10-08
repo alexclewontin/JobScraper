@@ -9,7 +9,7 @@ import pathlib
 
 import mysql.connector as mdb
 import pystache as ps
-from selenium import webdriver
+from selenium import webdriver, common
 import requests
 
 import yaml
@@ -46,6 +46,13 @@ class JobScraper:
 
         self.cnx.commit()
 
+        self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
+        seen = self.cur.fetchone()
+        if seen['seen'] == 1:
+            self.next_seen = 0
+        else:
+            self.next_seen = 1
+
         options = webdriver.ChromeOptions()
             #options.binary_location = 'chromedriver'
         options.add_argument('--window-size=1200x800')
@@ -55,17 +62,13 @@ class JobScraper:
         print("Initialized")
 
     def __del__(self):
-        self.browser.quit()
+        try:
+            self.browser.quit()
+        except Exception:
+            pass
         self.cnx.close()
 
     def __touch_opp(self, data):
-        self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
-        seen = self.cur.fetchone()
-        if seen['seen'] == 1:
-            next_seen = 0
-        else:
-            next_seen = 1
-
         stmnt = 'SELECT id FROM current WHERE id = %s AND corp = %s'
         args = (data['id'], data['corp'])
         self.cur.execute(stmnt, args)
@@ -74,11 +77,11 @@ class JobScraper:
         #result.append(self.cur.fetchall())
         if not result:
             stmnt = 'INSERT INTO new VALUES (%s, %s, %s, %s, %s, %s, %s)'
-            args = (data['date'].strftime('%Y-%m-%d'), next_seen, data['corp'], data['title'], data['loc'], data['id'], data['url'])
+            args = (data['date'].strftime('%Y-%m-%d'), self.next_seen, data['corp'], data['title'], data['loc'], data['id'], data['url'])
             self.cur.execute(stmnt, args)
         else:
             stmnt = 'UPDATE current SET seen = %s WHERE corp = %s AND id = %s'
-            args = (next_seen, data['corp'], data['id'])
+            args = (self.next_seen, data['corp'], data['id'])
             self.cur.execute(stmnt, args)
         self.cnx.commit()
 
@@ -86,18 +89,14 @@ class JobScraper:
         self.cur.execute('SELECT * FROM new WHERE corp IN (SELECT * FROM outlets)')
         new_opps = self.cur.fetchall()
 
-        self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
-        seen = self.cur.fetchone()
-        if seen['seen'] == 1:
-            next_seen = 0
-        else:
-            next_seen = 1
-
-        self.cur.execute('SELECT * FROM current WHERE seen != %s AND id != \'TRACKER\'', (next_seen,))
+        self.cur.execute('SELECT * FROM current WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
         old_opps = self.cur.fetchall()
 
         if not new_opps and not old_opps:
-            self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (next_seen,))
+            self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (self.next_seen,))
+            self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT corp FROM current WHERE corp NOT IN (SELECT name FROM outlets)')
+            self.cur.execute('INSERT INTO current SELECT * FROM new')
+            self.cur.execute('DELETE FROM new')
             self.cnx.commit()
             print('Nothing new, no email sent.')
             return
@@ -123,15 +122,15 @@ class JobScraper:
             server.login(self.cfg['smtp']['user'], self.cfg['smtp']['passwd'])
             server.sendmail(self.cfg['smtp']['user'], self.cfg['recipient']['email'], msg.as_string())
 
-        self.cur.execute('INSERT INTO old SELECT * FROM current WHERE seen != %s AND id != \'TRACKER\'', (next_seen,))
-        self.cur.execute('DELETE FROM current WHERE seen != %s AND id != \'TRACKER\'', (next_seen,))
+        self.cur.execute('INSERT INTO old SELECT * FROM current WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
+        self.cur.execute('DELETE FROM current WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
         self.cnx.commit()
 
         self.cur.execute('INSERT INTO current SELECT * FROM new')
         self.cur.execute('DELETE FROM new')
         self.cnx.commit()
 
-        self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (next_seen,))
+        self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (self.next_seen,))
         self.cnx.commit()
 
         self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT cur.corp FROM current cur WHERE cur.corp NOT IN (SELECT name FROM outlets)')
@@ -151,22 +150,26 @@ class JobScraper:
             self.__touch_opp(o)
 
     def __scrape(self, fmt, board, company, url, cmd=''):
-        if fmt == 'rendered':
-            self.browser.implicitly_wait(30)
-            self.browser.get(url)
-            time.sleep(5)
-            self.browser.execute_script(cmd)
-            time.sleep(5)
-            data = self.browser.execute_script("return document.body.innerHTML")
+        try:
+            if fmt == 'rendered':
+                self.browser.implicitly_wait(30)
+                self.browser.get(url)
+                time.sleep(5)
+                self.browser.execute_script(cmd)
+                time.sleep(5)
+                data = self.browser.execute_script("return document.body.innerHTML")
 
-        elif fmt == 'raw':
-            data = requests.get(url)
-        else:
-            raise ValueError('Format should either be raw or rendered!')
+            elif fmt == 'raw':
+                data = requests.get(url)
+            else:
+                raise ValueError('Format should either be raw or rendered!')
 
-        result = getattr(hooks, 'parse_' + board.lower())(data, company)
+            result = getattr(hooks, 'parse_' + board.lower())(data, company)
 
-        self.opps.extend(result)
+            self.opps.extend(result)
+        except common.exceptions.TimeoutException:
+            self.cur.execute('UPDATE current SET seen = %s WHERE corp = %s', (self.next_seen, company))
+            print("Request timed out.")
 
 path = pathlib.Path(__file__).absolute().parent.parent / 'config'
 
@@ -183,5 +186,5 @@ JS = JobScraper(config, sources)
 JS.crawl()
 JS.send_email(tmpl_text, tmpl_html)
 
-#hacky, to avoid "ImportError: sys.meta_path is None, Python is likely shutting down" exception from destructor
+#hacky, to avoid "ImportError: sys.meta_path is None, Python is likely shutting down" exception from destructor on normal exit
 del JS

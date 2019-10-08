@@ -49,7 +49,18 @@
   board: "applytojob"
   url: "https://bostonglobemediapartners.applytojob.com/"
   fmt: "raw"
-
-
-
-
+# -
+#   company: "The New York Times"
+#   board: "workday"
+#   url: "https://nytimes.wd5.myworkdayjobs.com/news"
+#   fmt: "rendered"
+-
+  company: "Gizmodo Media"
+  board: "greenhouse"
+  url: "https://boards-api.greenhouse.io/v1/boards/gizmodomedia/jobs"
+  fmt: "raw"
+-
+  company: "Slate"
+  board: "slate"
+  url: "https://slate.com/jobs"
+  fmt: "raw"

@@ -7,17 +7,19 @@ import testhooks
 
 src = '''
 -
-    company: "The New York Times"
-    board: "workday"
-    url: "https://nytimes.wd5.myworkdayjobs.com/news"
-    fmt: "rendered"
+    company: "Slate"
+    board: "slate"
+    url: "https://slate.com/jobs"
+    fmt: "raw"
     cmd: ""
 
 '''
-
+print('Loading sources...')
 s = yaml.full_load(src)
 for src in s:
+    print('Getting %s...' % src['company'])
     if src['fmt'] == 'rendered':
+        print('Rendering %s...' % src['company'])
         options = webdriver.ChromeOptions()
         #options.binary_location = 'chromedriver'
         options.add_argument('--window-size=1200x800')
@@ -34,10 +36,13 @@ for src in s:
 
         browser.quit()
 
+        print('Rendered %s.' % src['company'])
+
     elif src['fmt'] == 'raw':
         data = requests.get(src['url'])
     else:
         raise ValueError('Format should either be raw or rendered!')
+    print('Parsing %s...' % src['company'])
     result = getattr(testhooks, 'parse_' + src['board'].lower())(data, src['company'])
 
     print(result)
