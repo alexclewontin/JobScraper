@@ -36,13 +36,10 @@ class JobScraper:
                         title VARCHAR(255),
                         loc VARCHAR(255),
                         id VARCHAR(255),
-                        url VARCHAR(255))'''
-        if 'new' not in tables:
-            self.cur.execute('CREATE TABLE new' + self.spec)
+                        url VARCHAR(255),
+                        status VARCHAR(255))'''
         if 'current' not in tables:
             self.cur.execute('CREATE TABLE current' + self.spec)
-        if 'old' not in tables:
-            self.cur.execute('CREATE TABLE old' + self.spec)
         self.cnx.commit()
 
         self.cur.execute('SELECT seen FROM current WHERE id = \'TRACKER\'')
@@ -75,8 +72,8 @@ class JobScraper:
         #self.cur.execute('SELECT id FROM new WHERE id = %s AND corp = %s', (id, corp))
         #result.append(self.cur.fetchall())
         if not result:
-            stmnt = 'INSERT INTO new VALUES (%s, %s, %s, %s, %s, %s, %s)'
-            args = (data['date'].strftime('%Y-%m-%d'), self.next_seen, data['corp'], data['title'], data['loc'], data['id'], data['url'])
+            stmnt = 'INSERT INTO current VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+            args = (data['date'].strftime('%Y-%m-%d'), self.next_seen, data['corp'], data['title'], data['loc'], data['id'], data['url'], 'new')
             self.cur.execute(stmnt, args)
         else:
             stmnt = 'UPDATE current SET seen = %s WHERE corp = %s AND id = %s'
@@ -85,7 +82,7 @@ class JobScraper:
         self.cnx.commit()
 
     def send_email(self, text, html):
-        self.cur.execute('SELECT * FROM new WHERE corp IN (SELECT * FROM outlets)')
+        self.cur.execute('SELECT * FROM current WHERE status = \'new\' AND corp IN (SELECT * FROM outlets)')
         new_opps = self.cur.fetchall()
 
         self.cur.execute('SELECT * FROM current WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
@@ -94,8 +91,7 @@ class JobScraper:
         if not new_opps and not old_opps:
             self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (self.next_seen,))
             self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT corp FROM current WHERE corp NOT IN (SELECT name FROM outlets)')
-            self.cur.execute('INSERT INTO current SELECT * FROM new')
-            self.cur.execute('DELETE FROM new')
+            self.cur.execute('UPDATE current SET status = \'current\' WHERE status = \'new\'')
             self.cnx.commit()
             print('Nothing new, no email sent.')
             return
@@ -121,12 +117,10 @@ class JobScraper:
             server.login(self.cfg['smtp']['user'], self.cfg['smtp']['passwd'])
             server.sendmail(self.cfg['smtp']['user'], self.cfg['recipient']['email'], msg.as_string())
 
-        self.cur.execute('INSERT INTO old SELECT * FROM current WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
-        self.cur.execute('DELETE FROM current WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
+        self.cur.execute('UPDATE current SET status = \'old\' WHERE seen != %s AND id != \'TRACKER\'', (self.next_seen,))
         self.cnx.commit()
 
-        self.cur.execute('INSERT INTO current SELECT * FROM new')
-        self.cur.execute('DELETE FROM new')
+        self.cur.execute('UPDATE current SET status = \'current\' WHERE status = \'new\'')
         self.cnx.commit()
 
         self.cur.execute('UPDATE current SET seen = %s WHERE id = \'TRACKER\'', (self.next_seen,))
