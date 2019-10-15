@@ -18,6 +18,7 @@ import hooks
 
 class JobScraper:
     """Encapsulates all the methods and data needed by JobScraper"""
+    
     def __init__(self, cfg, src):
         print('Initializing...')
         self.opps = []
@@ -63,7 +64,7 @@ class JobScraper:
         self.cnx.close()
 
     def __touch_opp(self, data):
-        stmnt = 'SELECT id FROM jobs WHERE id = %s AND corp = %s'
+        stmnt = 'SELECT id, status FROM jobs WHERE id = %s AND corp = %s'
         args = (data['id'], data['corp'])
         self.cur.execute(stmnt, args)
         result = self.cur.fetchall()
@@ -77,7 +78,35 @@ class JobScraper:
             stmnt = 'UPDATE jobs SET seen = %s WHERE corp = %s AND id = %s'
             args = (self.next_seen, data['corp'], data['id'])
             self.cur.execute(stmnt, args)
+            if result[0]['status'] == 'old':
+                stmnt = 'UPDATE jobs SET status = \'new\' WHERE corp = %s AND id = %s'
+                args = (data['corp'], data['id'])
+                self.cur.execute(stmnt, args)
         self.cnx.commit()
+
+    def __scrape(self, fmt, board, company, url, cmd=''):
+        try:
+            if fmt == 'rendered':
+                self.browser.implicitly_wait(30)
+                self.browser.get(url)
+                time.sleep(5)
+                self.browser.execute_script(cmd)
+                time.sleep(5)
+                data = self.browser.execute_script("return document.body.innerHTML")
+
+            elif fmt == 'raw':
+                data = requests.get(url)
+            else:
+                raise ValueError('Format should either be raw or rendered!')
+
+            result = getattr(hooks, 'parse_' + board.lower())(data, company)
+
+            self.opps.extend(result)
+        except common.exceptions.TimeoutException as e:
+            print(e)
+            self.cur.execute('UPDATE jobs SET seen = %s WHERE corp = %s AND status = \'current\'', (self.next_seen, company))
+            self.cnx.commit()
+            print("Request timed out.")
 
     def send_email(self, text, html):
         """TODO: add docstring"""
@@ -136,27 +165,6 @@ class JobScraper:
         for o in self.opps:
             self.__touch_opp(o)
 
-    def __scrape(self, fmt, board, company, url, cmd=''):
-        try:
-            if fmt == 'rendered':
-                self.browser.implicitly_wait(30)
-                self.browser.get(url)
-                time.sleep(5)
-                self.browser.execute_script(cmd)
-                time.sleep(5)
-                data = self.browser.execute_script("return document.body.innerHTML")
-
-            elif fmt == 'raw':
-                data = requests.get(url)
-            else:
-                raise ValueError('Format should either be raw or rendered!')
-
-            result = getattr(hooks, 'parse_' + board.lower())(data, company)
-
-            self.opps.extend(result)
-        except common.exceptions.TimeoutException:
-            self.cur.execute('UPDATE jobs SET seen = %s WHERE corp = %s AND status = \'current\'', (self.next_seen, company))
-            print("Request timed out.")
 
 path = pathlib.Path(__file__).absolute().parent.parent / 'config'
 
