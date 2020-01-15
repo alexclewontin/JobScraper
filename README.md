@@ -20,7 +20,7 @@ An empty `config.yaml` file is included in the repository. The fields should be 
 
 A list of journalism-related sources is included as `sources.yaml` as well. Adding additional sources that utilize an already implemented format should be trivial.
 
-Part of the power of JobScraper is that adding new formats to parse should also be trivial. Simply define a new function in `hooks.py` of the format `parse_{FORMAT}(data, company)` where `company` is a string containing the name of the company, and `data` is the raw text of the html response (set the key `fmt` to `rendered` in `sources.yaml` if the javascript should be rendered.) The function should return a list of dict objects, each containing the following keys:
+Part of the power of JobScraper is that adding new formats to parse should also be trivial. Simply define a new function in `hooks.py` of the format `parse_{FORMAT}(data, company)` where `company` is a string containing the name of the company, and `data` is the raw text of the html response (set the key `fmt` to `rendered` in `sources.yaml` if the javascript should be rendered.) The function should return a list of dict objects, each containing the following kvps:
 
 ```
             'corp' : 'the company', as a string
