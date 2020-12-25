@@ -12,7 +12,7 @@ a chromedriver executable, and an installation of MySQL, or MariaDB.
 
 Coming soon.
 
-Most elements should be system-independent (at least across POSIX systems), but because deamon systems vary between, for example, macOS and Ubuntu, running the engine as a daemon has been left as an exercise to the reader.
+Most elements should be system-independent. I use a cron job to regularly run it. Because of variations across systems, and users desires for how frequently it runs, this has been left as an exercise for the reader.
 
 ## Configuration
 
