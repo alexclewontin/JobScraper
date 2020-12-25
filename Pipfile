@@ -5,13 +5,13 @@ verify_ssl = true
 
 [dev-packages]
 pylint = "*"
+autopep8 = "*"
 
 [packages]
 requests = "*"
 beautifulsoup4 = "*"
 selenium = "*"
 pyyaml = "*"
-mysql-connector-python = "*"
 python-dateutil = "*"
 pystache = "*"
 

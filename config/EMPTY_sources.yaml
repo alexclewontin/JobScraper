@@ -1,0 +1,5 @@
+-
+  company: # a string representing the name of company
+  board: # a string representing the name of the format. There must be a corresponding parse_FORMAT function in hooks.py
+  url: # a string representing the url to scrape
+  fmt: # "raw" (for the plain results of a http request) or "rendered" (to execute javascript with selenium)

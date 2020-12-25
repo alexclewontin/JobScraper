@@ -35,7 +35,6 @@ def parse_skeleton(data, company):
 """
 
 from datetime import datetime, timedelta
-import hashlib
 import pathlib
 
 import requests
@@ -111,14 +110,10 @@ def parse_applytojob(data, company):
     for r in raw_opps:
         title = r.find(class_='list-group-item-heading').a.string
         loc = r.ul.li.contents[1]
-        m = hashlib.md5()
-        m.update(title.encode('utf-8'))
-        m.update(loc.encode('utf-8'))
         o = {
             'corp' : company,
             'title' : title,
             'loc' : loc,
-            'id' : m.hexdigest(),
             'date' : datetime.today(),
             'url' : r.find(class_='list-group-item-heading').a['href']
         }
@@ -164,8 +159,6 @@ def parse_slate(data, company):
     raw_opps = soup.find_all('a')
     for r in raw_opps:
         url = r['href']
-        m = hashlib.md5()
-        m.update(url.encode('utf-8'))
         r = r.string.split('-')
         if len(r) > 1:
             loc = r[1]
@@ -175,7 +168,6 @@ def parse_slate(data, company):
             'corp' : company,
             'title' : r[0].strip(),
             'loc' : loc,
-            'id' : m.hexdigest(),
             'date' : datetime.today(),
             'url' : url
         }

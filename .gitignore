@@ -5,3 +5,8 @@ dist
 .DS_Store
 google_api_key
 install.sh
+cron.sh
+sources.yaml
+.vscode
+__pycache__
+jobscraper.db
