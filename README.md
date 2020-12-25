@@ -12,7 +12,7 @@ a chromedriver executable, and an installation of MySQL, or MariaDB.
 
 Coming soon.
 
-Most elements should be system-independent. I use a cron job to regularly run it. Because of variations across systems, and users desires for how frequently it runs, this has been left as an exercise for the reader.
+Most elements should be system-independent. I use a cron job to regularly run it. Because of variations across systems, and users' desires for how frequently it runs, this has been left as an exercise for the reader.
 
 ## Configuration
 
