@@ -10,12 +10,19 @@ import hashlib
 
 import sqlite3 as db
 import pystache as ps
+import premailer
 import requests
 import yaml
 from selenium import common, webdriver
 
 import hooks
 
+
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
 
 class JobScraper:
     """Encapsulates all the methods and data needed by JobScraper"""
@@ -34,10 +41,11 @@ class JobScraper:
             self.src = src
             # self.cnx = mdb.connect(user=self.cfg['db']['user'], password=self.cfg['db']['passwd'], database=self.cfg['db']['db'])
             self.cnx = db.connect("jobscraper.db")
+            self.cnx.row_factory = dict_factory
             self.cur = self.cnx.cursor()
             self.cur.execute("SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%';")
             names = self.cur.fetchall()
-            tables = [i for l in names for i in l]
+            tables = [d['name'] for d in names]
 
             if 'jobs' not in tables:
                 spec = '''(odate DATE,
@@ -58,7 +66,7 @@ class JobScraper:
 
             self.cur.execute('SELECT seen FROM jobs WHERE id = \'TRACKER\'')
             seen = self.cur.fetchone()
-            if seen[0] == 1:
+            if seen['seen'] == 1:
                 self.next_seen = 0
             else:
                 self.next_seen = 1
@@ -98,7 +106,7 @@ class JobScraper:
             stmnt = 'UPDATE jobs SET seen = ? WHERE corp = ? AND id = ?'
             args = (self.next_seen, data['corp'], data['id'])
             self.cur.execute(stmnt, args)
-            if result[0][1] == 'old':
+            if result[0]['status'] == 'old':
                 stmnt = 'UPDATE jobs SET status = \'new\' WHERE corp = ? AND id = ?'
                 args = (data['corp'], data['id'])
                 self.cur.execute(stmnt, args)
@@ -119,7 +127,7 @@ class JobScraper:
             else:
                 raise ValueError('Format should either be raw or rendered!')
 
-            result = getattr(hooks, 'parse_' + board.lower())(data, company)
+            result = getattr(hooks, 'parse_' + board.lower())(data, company, url)
 
             self.opps.extend(result)
         except common.exceptions.TimeoutException as e:
@@ -130,7 +138,7 @@ class JobScraper:
 
     def send_email(self, text, html):
         """TODO: add docstring"""
-        self.cur.execute('SELECT * FROM jobs WHERE status = \'new\' AND corp IN (SELECT * FROM outlets)')
+        self.cur.execute('SELECT * FROM jobs WHERE status = \'new\' AND corp IN (SELECT name FROM outlets)')
         new_opps = self.cur.fetchall()
 
         self.cur.execute('SELECT * FROM jobs WHERE status = \'current\' AND seen != ? AND id != \'TRACKER\'', (self.next_seen,))
@@ -138,9 +146,11 @@ class JobScraper:
 
         if not new_opps and not old_opps:
             self.cur.execute('UPDATE jobs SET seen = ? WHERE id = \'TRACKER\' and status = \'current\'', (self.next_seen,))
-            self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT corp FROM jobs WHERE corp NOT IN (SELECT name FROM outlets)')
+            self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT corp FROM jobs LEFT JOIN outlets ON jobs.corp = outlets.name WHERE outlets.name IS NULL;')
+            self.cur.execute('DELETE FROM outlets WHERE name IS NULL OR trim(name) = \'\';')
             self.cur.execute('UPDATE jobs SET status = \'current\' WHERE status = \'new\'')
             self.cnx.commit()
+
             print('Nothing new, no email sent.')
             return
 
@@ -149,6 +159,8 @@ class JobScraper:
 
         html = ps.render(html, {'new': new_opps, 'old': old_opps})
         text = ps.render(text, {'new': new_opps, 'old': old_opps})
+
+        html = premailer.transform(html)
 
         part1 = MIMEText(text, 'plain')
         part2 = MIMEText(html, 'html')
@@ -168,7 +180,8 @@ class JobScraper:
         self.cur.execute('UPDATE jobs SET status = \'old\' WHERE seen != ? AND id != \'TRACKER\'', (self.next_seen,))
         self.cur.execute('UPDATE jobs SET status = \'current\' WHERE status = \'new\'')
         self.cur.execute('UPDATE jobs SET seen = ? WHERE id = \'TRACKER\'', (self.next_seen,))
-        self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT j.corp FROM jobs j WHERE j.corp NOT IN (SELECT name FROM outlets)')
+        self.cur.execute('INSERT INTO outlets(name) SELECT DISTINCT corp FROM jobs LEFT JOIN outlets ON jobs.corp = outlets.name WHERE outlets.name IS NULL;')
+        self.cur.execute('DELETE FROM outlets WHERE name IS NULL OR trim(name) = \'\';')
         self.cnx.commit()
 
         print('Database updated, email sent')

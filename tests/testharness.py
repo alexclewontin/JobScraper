@@ -7,10 +7,10 @@ import testhooks
 
 src = '''
 -
-    company: "Slate"
-    board: "slate"
-    url: "https://slate.com/jobs"
-    fmt: "raw"
+    company: "Boston Dynamics"
+    board: "workday"
+    url: "https://bostondynamics.wd1.myworkdayjobs.com/Boston_Dynamics/"
+    fmt: "rendered"
     cmd: ""
 
 '''
@@ -43,6 +43,6 @@ for src in s:
     else:
         raise ValueError('Format should either be raw or rendered!')
     print('Parsing %s...' % src['company'])
-    result = getattr(testhooks, 'parse_' + src['board'].lower())(data, src['company'])
+    result = getattr(testhooks, 'parse_' + src['board'].lower())(data, src['company'], src['url'])
 
     print(result)

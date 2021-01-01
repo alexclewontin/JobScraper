@@ -14,6 +14,7 @@ selenium = "*"
 pyyaml = "*"
 python-dateutil = "*"
 pystache = "*"
+premailer = "*"
 
 [requires]
 python_version = "3.7"

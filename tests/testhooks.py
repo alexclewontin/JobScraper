@@ -34,27 +34,31 @@ from datetime import datetime, timedelta
 from dateutil import parser as dp
 from bs4 import BeautifulSoup
 
-def parse_slate(data, company):
+def parse_workday(data, company, url):
+    '''TODO: add docstring'''
     opps = []
-
-    soup = BeautifulSoup(data.text, 'html.parser')
-    soup = soup.find(class_='standalone-page__content')
-    raw_opps = soup.find_all('a')
+    soup = BeautifulSoup(data, 'html.parser')
+    raw_opps = soup.find_all(attrs={'data-automation-id' : 'compositeContainer'})
     for r in raw_opps:
-        url = r['href']
-        m = hashlib.md5()
-        m.update(url.encode('utf-8'))
-        r = r.string.split('-')
-        if len(r) > 1:
-            loc = r[1]
+        title = r.find(attrs={'role' : 'link'}).string
+        raw = r.find(attrs={'data-automation-id' : 'compositeSubHeaderOne'}).string.split('|')
+        raw = [i.strip() for i in raw]
+        raw[2] = raw[2].split(' ', 1)[1].split(' ')[0]
+        #raw[2] = raw[2].split(' ')[0]
+        if raw[2] == 'Today':
+            date = datetime.today()
+        elif raw[2] == 'Yesterday':
+            date = datetime.now() - timedelta(1)
+        elif raw[2] == '30+':
+            date = datetime.now() - timedelta(30)
         else:
-            loc = "None"
+            date = datetime.now() - timedelta(int(raw[2]))
         o = {
             'corp' : company,
-            'title' : r[0].strip(),
-            'loc' : loc,
-            'id' : m.hexdigest(),
-            'date' : datetime.today(),
+            'title' : title,
+            'loc' : raw[1],
+            'id' : raw[0],
+            'date' : date,
             'url' : url
         }
         opps.append(o)
