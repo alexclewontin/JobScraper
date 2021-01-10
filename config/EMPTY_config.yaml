@@ -1,7 +1,5 @@
 db:
-  user:
-  passwd:
-  db: "jobscraper"
+  path: 
 
 smtp:
   user:
@@ -11,4 +9,3 @@ smtp:
 
 recipient:
   email:
-

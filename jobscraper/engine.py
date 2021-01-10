@@ -40,7 +40,7 @@ class JobScraper:
             self.cfg = cfg
             self.src = src
             # self.cnx = mdb.connect(user=self.cfg['db']['user'], password=self.cfg['db']['passwd'], database=self.cfg['db']['db'])
-            self.cnx = db.connect("jobscraper.db")
+            self.cnx = db.connect(self.cfg['db']['path'])
             self.cnx.row_factory = dict_factory
             self.cur = self.cnx.cursor()
             self.cur.execute("SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%';")
